@@ -44,6 +44,7 @@ struct User {
     // optional 'a_' + md5 hex digest (32 bytes) + null terminator = 35
     char avatar[128];
     // Rounded way up because I'm paranoid about games breaking from future changes in these sizes
+    char globalName[344];
 };
 
 static RpcConnection* Connection{nullptr};
@@ -194,6 +195,7 @@ static void Discord_UpdateConnection(void)
                     auto userId = GetStrMember(user, "id");
                     auto username = GetStrMember(user, "username");
                     auto avatar = GetStrMember(user, "avatar");
+                    auto global_name = GetStrMember(user, "global_name");
                     auto joinReq = JoinAskQueue.GetNextAddMessage();
                     if (userId && username && joinReq) {
                         StringCopy(joinReq->userId, userId);
@@ -201,6 +203,10 @@ static void Discord_UpdateConnection(void)
                         auto discriminator = GetStrMember(user, "discriminator");
                         if (discriminator) {
                             StringCopy(joinReq->discriminator, discriminator);
+                        }
+                        if (global_name)
+                        {
+                            StringCopy(joinReq->globalName, global_name);
                         }
                         if (avatar) {
                             StringCopy(joinReq->avatar, avatar);
@@ -320,9 +326,14 @@ extern "C" DISCORD_EXPORT void Discord_Initialize(const char* applicationId,
         auto userId = GetStrMember(user, "id");
         auto username = GetStrMember(user, "username");
         auto avatar = GetStrMember(user, "avatar");
+        auto global_name = GetStrMember(user, "global_name");
         if (userId && username) {
             StringCopy(connectedUser.userId, userId);
             StringCopy(connectedUser.username, username);
+            if (global_name)
+            {
+                StringCopy(connectedUser.globalName, global_name);
+            }
             auto discriminator = GetStrMember(user, "discriminator");
             if (discriminator) {
                 StringCopy(connectedUser.discriminator, discriminator);
@@ -425,6 +436,7 @@ extern "C" DISCORD_EXPORT void Discord_RunCallbacks(void)
                            connectedUser.username,
                            connectedUser.discriminator,
                            connectedUser.avatar};
+                           connectedUser.globalName};
             Handlers.ready(&du);
         }
     }
@@ -460,7 +472,7 @@ extern "C" DISCORD_EXPORT void Discord_RunCallbacks(void)
         {
             std::lock_guard<std::mutex> guard(HandlerMutex);
             if (Handlers.joinRequest) {
-                DiscordUser du{req->userId, req->username, req->discriminator, req->avatar};
+                DiscordUser du{req->userId, req->username, req->discriminator, req->avatar, req->globalName};
                 Handlers.joinRequest(&du);
             }
         }
